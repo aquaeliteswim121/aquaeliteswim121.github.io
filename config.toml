@@ -9,5 +9,5 @@ name = "Aqua Elite"
 accent = "#38bdf8"
 
 [params.supabase]
-url  = "https://YOUR-PROJECT-REF.supabase.co"
-anon = "YOUR_ANON_PUBLIC_KEY"
+url  = "https://xjyceminjbjjztwwrcwt.supabase.co"
+anon = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqeWNlbWluamJqanp0d3dyY3d0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkyODUwMTEsImV4cCI6MjA3NDg2MTAxMX0.zjHtRiKnOvrk-5Tr_bbTExXEjZ8r7ZOkUKOkkwwsNGQ"
