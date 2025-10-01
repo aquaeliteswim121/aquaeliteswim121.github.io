@@ -1,4 +1,3 @@
-<script>
 // static/js/auth.js
 (function () {
   const { createClient } = window.supabase;
@@ -18,7 +17,7 @@
     authLinks.forEach(a => a.style.display = session ? "" : "none");
     if (session){
       window.supabase.from('profiles').select('role').eq('id', session.user.id).single()
-        .then(({data}) => {
+        .then(({ data }) => {
           const isAdmin = data && data.role === 'admin';
           adminLinks.forEach(a => a.style.display = isAdmin ? "" : "none");
         })
@@ -36,7 +35,7 @@
     gateNav(session);
   }
 
-  // NEW: wait briefly for Supabase to restore session from storage
+  // Wait a bit for Supabase to restore session from storage
   async function waitForSession(timeoutMs = 1800){
     const start = Date.now();
     let { data: { session } } = await supabase.auth.getSession();
@@ -47,11 +46,11 @@
     return session || null;
   }
 
-  // NEW: soft mode avoids immediate redirect (prevents flicker)
+  // Soft mode prevents immediate redirect (stops flicker)
   window.requireAuth = async (redirectTo = '/', { soft = false } = {}) => {
     const session = await waitForSession(1800);
     if (!session) {
-      if (soft) return null;        // caller decides what to show
+      if (soft) return null;
       window.location.href = redirectTo;
       return null;
     }
@@ -76,6 +75,7 @@
     });
   }
 
+  // Initialize nav on load + react to changes
+  supabase.auth.getSession().then(({ data: { session } }) => setNav(session));
   supabase.auth.onAuthStateChange((_event, session) => setNav(session));
 })();
-</script>
