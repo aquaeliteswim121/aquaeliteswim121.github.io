@@ -2,7 +2,6 @@
 baseURL = "https://aquaeliteswim121.github.io/"
 languageCode = "en-us"
 title = "Aqua Elite Swim Club"
-theme = ""
 
 [params.brand]
 name = "Aqua Elite"
