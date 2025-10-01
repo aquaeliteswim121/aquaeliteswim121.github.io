@@ -95,18 +95,44 @@
     </div>
   </div>
 </section>
-<script defer src="/js/api.js"></script>
+ <script defer src="/js/api.js"></script>
 <script>
   function showTab(id){
     document.querySelectorAll('[id^=tab-]').forEach(el => el.classList.add('hidden'));
     document.getElementById('tab-'+id).classList.remove('hidden');
   }
+
+  async function getProfileWithRetry(retries = 5, delayMs = 250){
+    for (let i = 0; i < retries; i++){
+      try {
+        const me = await api.getMyProfile();
+        if (me) return me;
+      } catch (e) {}
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+    return null;
+  }
+
   window.addEventListener('DOMContentLoaded', async () => {
-    await requireAuth('/');
-    const me = await api.getMyProfile();
-    if (me.role !== 'admin'){ document.getElementById('gate').textContent = 'Admins only.'; return; }
-    document.getElementById('gate').classList.add('hidden');
-    document.getElementById('adminPanel').classList.remove('hidden');
+    // SOFT auth: don't redirect immediately if session not ready yet
+    const session = await requireAuth('/', { soft: true });
+    const gate = document.getElementById('gate');
+    const adminPanel = document.getElementById('adminPanel');
+
+    if (!session){
+      gate.textContent = 'Please sign in to access the Admin Dashboard.';
+      return;
+    }
+
+    // Retry a few times because the profile row may be created a moment after first login
+    const me = await getProfileWithRetry();
+    if (!me || me.role !== 'admin'){
+      gate.textContent = 'Admins only.';
+      return;
+    }
+
+    gate.classList.add('hidden');
+    adminPanel.classList.remove('hidden');
 
     document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
     showTab('roster');
@@ -116,6 +142,7 @@
       await api.upsertProfile(Object.fromEntries(f.entries())); alert('Saved');
       document.getElementById('searchBtn').click();
     });
+
     document.getElementById('searchBtn').addEventListener('click', async () => {
       const q = document.getElementById('q').value;
       const list = await api.getRoster(q, 50, 0);
@@ -129,27 +156,34 @@
       e.preventDefault(); const f = new FormData(e.target);
       await api.markAttendance(Object.fromEntries(f.entries())); alert('Saved'); e.target.reset();
     });
+
     document.getElementById('wForm').addEventListener('submit', async (e) => {
       e.preventDefault(); const f = new FormData(e.target);
       await api.createWorkout(Object.fromEntries(f.entries())); alert('Saved'); e.target.reset();
     });
+
     document.getElementById('pForm').addEventListener('submit', async (e) => {
       e.preventDefault(); const f = new FormData(e.target);
       await api.recordPayment(Object.fromEntries(f.entries())); alert('Saved'); e.target.reset();
     });
+
     document.getElementById('vForm').addEventListener('submit', async (e) => {
       e.preventDefault(); const f = new FormData(e.target);
       await api.addVideo(Object.fromEntries(f.entries())); alert('Saved'); e.target.reset();
     });
+
     document.getElementById('seedVideos').addEventListener('click', async () => {
       await api.seedVideosDefaults(); alert('Default videos seeded'); 
     });
+
     document.getElementById('seedSampleForm').addEventListener('submit', async (e) => {
       e.preventDefault(); const f = new FormData(e.target);
       await api.seedSampleFor(f.get('email')); alert('Seeded for ' + f.get('email')); e.target.reset();
     });
 
+    // initial roster load
     document.getElementById('searchBtn').click();
   });
+
 </script>
 {{ end }}
