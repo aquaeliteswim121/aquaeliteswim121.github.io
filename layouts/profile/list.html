@@ -1,4 +1,3 @@
-
 {{ define "main" }}
 <section class="card">
   <h1>My Profile</h1>
@@ -6,30 +5,54 @@
     <div class="panel">
       <label>Full name<br><input name="full_name" /></label><br>
       <label>Display name<br><input name="display_name" /></label><br>
+      <label>Phone<br><input name="phone" /></label><br>
+      <label>Emergency contact<br><input name="emergency_contact" /></label><br>
       <label>Date of birth<br><input name="dob" type="date" /></label><br>
       <label>Parent contact (if minor)<br><input name="parent_contact" /></label><br>
       <label>Consent — Photo <input type="checkbox" name="consent_photo" /></label><br>
       <label>Consent — Video <input type="checkbox" name="consent_video" /></label><br>
       <button class="btn">Save</button>
     </div>
-    <div class="panel">
-      <div id="level"></div>
-      <div id="meta" class="muted"></div>
+
+    <div class="panel" style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+      <div>
+        <img id="avatar" alt="avatar" style="width:140px;height:140px;border-radius:50%;object-fit:cover;border:1px solid var(--line);background:#111" />
+      </div>
+      <div>
+        <label>Profile photo<br><input id="avatarFile" type="file" accept="image/*" /></label><br>
+        <button id="uploadBtn" type="button" class="btn secondary" style="margin-top:8px">Upload</button>
+        <div class="muted small" id="uploadMsg" style="margin-top:6px"></div>
+        <div id="level" style="margin-top:14px"></div>
+        <div id="meta" class="muted"></div>
+      </div>
     </div>
   </form>
 </section>
+
 <script defer src="/js/api.js"></script>
 <script>
+  async function setAvatar(url){
+    const img = document.getElementById('avatar');
+    img.src = url || 'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22140%22 height=%22140%22><rect width=%22100%25%22 height=%22100%25%22 fill=%22%23111%22/><text x=%2250%25%22 y=%2254%25%22 fill=%22%23aaa%22 font-size=%2220%22 text-anchor=%22middle%22>Avatar</text></svg>';
+  }
+
   window.addEventListener('DOMContentLoaded', async () => {
     await requireAuth('/');
+
     const me = await api.getMyProfile();
     const f = document.getElementById('pform');
-    ['full_name','display_name','dob','parent_contact'].forEach(k => { if (me[k]) f.elements[k].value = me[k]; });
+
+    // Fill fields
+    ['full_name','display_name','phone','emergency_contact','dob','parent_contact'].forEach(k => { if (me[k]) f.elements[k].value = me[k]; });
     f.elements['consent_photo'].checked = !!me.consent_photo;
     f.elements['consent_video'].checked = !!me.consent_video;
+
     document.getElementById('level').innerHTML = `<h3>Level</h3><p>${me.squad_level} ${me.sublevel} — Group ${me.group_no}</p>`;
     document.getElementById('meta').textContent = `Status: ${me.status} • Joined: ${me.join_date}`;
 
+    await setAvatar(me.avatar_url);
+
+    // Save profile basics
     f.addEventListener('submit', async (e) => {
       e.preventDefault();
       const o = Object.fromEntries(new FormData(f).entries());
@@ -37,6 +60,26 @@
       o.consent_video = !!f.elements['consent_video'].checked;
       await api.updateMyProfile(o);
       alert('Saved');
+    });
+
+    // Upload avatar
+    document.getElementById('uploadBtn').addEventListener('click', async () => {
+      const file = document.getElementById('avatarFile').files[0];
+      const msg = document.getElementById('uploadMsg');
+      if (!file){ msg.textContent = 'Choose an image first.'; return; }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      const ext = file.name.split('.').pop().toLowerCase() || 'jpg';
+      const path = `${user.id}/avatar.${ext}`;
+
+      msg.textContent = 'Uploading...';
+      const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr){ msg.textContent = 'Upload failed: ' + upErr.message; return; }
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+      await api.updateMyProfile({ avatar_url: data.publicUrl });
+      await setAvatar(data.publicUrl);
+      msg.textContent = 'Uploaded ✔';
     });
   });
 </script>
