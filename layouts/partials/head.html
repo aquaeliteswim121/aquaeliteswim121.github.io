@@ -1,0 +1,6 @@
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>{{ if .Title }}{{ .Title }} — {{ end }}{{ site.Title }}</title>
+<link rel="stylesheet" href="/css/styles.css" />
+<style>:root{ --brand: {{ with site.Params.brand.accent }}{{ . }}{{ else }}#38bdf8{{ end }}; }</style>

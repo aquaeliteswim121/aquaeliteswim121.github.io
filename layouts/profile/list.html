@@ -1,0 +1,43 @@
+
+{{ define "main" }}
+<section class="card">
+  <h1>My Profile</h1>
+  <form id="pform" class="grid">
+    <div class="panel">
+      <label>Full name<br><input name="full_name" /></label><br>
+      <label>Display name<br><input name="display_name" /></label><br>
+      <label>Date of birth<br><input name="dob" type="date" /></label><br>
+      <label>Parent contact (if minor)<br><input name="parent_contact" /></label><br>
+      <label>Consent — Photo <input type="checkbox" name="consent_photo" /></label><br>
+      <label>Consent — Video <input type="checkbox" name="consent_video" /></label><br>
+      <button class="btn">Save</button>
+    </div>
+    <div class="panel">
+      <div id="level"></div>
+      <div id="meta" class="muted"></div>
+    </div>
+  </form>
+</section>
+<script defer src="/js/api.js"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', async () => {
+    await requireAuth('/');
+    const me = await api.getMyProfile();
+    const f = document.getElementById('pform');
+    ['full_name','display_name','dob','parent_contact'].forEach(k => { if (me[k]) f.elements[k].value = me[k]; });
+    f.elements['consent_photo'].checked = !!me.consent_photo;
+    f.elements['consent_video'].checked = !!me.consent_video;
+    document.getElementById('level').innerHTML = `<h3>Level</h3><p>${me.squad_level} ${me.sublevel} — Group ${me.group_no}</p>`;
+    document.getElementById('meta').textContent = `Status: ${me.status} • Joined: ${me.join_date}`;
+
+    f.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const o = Object.fromEntries(new FormData(f).entries());
+      o.consent_photo = !!f.elements['consent_photo'].checked;
+      o.consent_video = !!f.elements['consent_video'].checked;
+      await api.updateMyProfile(o);
+      alert('Saved');
+    });
+  });
+</script>
+{{ end }}

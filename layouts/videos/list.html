@@ -1,0 +1,16 @@
+
+{{ define "main" }}
+<section class="card">
+  <h1>Videos</h1>
+  <div id="videos" class="videos"></div>
+</section>
+<script defer src="/js/api.js"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', async () => {
+    await requireAuth('/');
+    const me = await api.getMyProfile();
+    const vids = await api.getVideosForGroup(me.group_no);
+    document.getElementById('videos').innerHTML = (vids||[]).map(v => `<div><iframe loading="lazy" width="320" height="180" src="https://www.youtube.com/embed/${v.youtube_id}" title="${v.title||''}" frameborder="0" allowfullscreen></iframe><div class="muted">${v.title||''}</div></div>`).join('');
+  });
+</script>
+{{ end }}

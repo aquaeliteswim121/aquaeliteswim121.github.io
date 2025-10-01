@@ -1,0 +1,19 @@
+
+{{ define "main" }}
+<section class="card">
+  <h1>My Attendance</h1>
+  <div id="heatmap" class="heatmap"></div>
+  <div id="list"></div>
+</section>
+<script defer src="/js/heatmap.js"></script>
+<script defer src="/js/api.js"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', async () => {
+    await requireAuth('/');
+    const start = new Date(); start.setDate(start.getDate() - 180);
+    const att = await api.getAttendanceRange(start.toISOString().slice(0,10));
+    renderHeatmap(att);
+    document.getElementById('list').innerHTML = '<ul>'+att.map(a => `<li>${a.date} — ${a.present ? 'Present' : 'Absent'}</li>`).join('')+'</ul>';
+  });
+</script>
+{{ end }}

@@ -1,0 +1,13 @@
+
+baseURL = "https://aquaeliteswim121.github.io/"
+languageCode = "en-us"
+title = "Aqua Elite Swim Club"
+theme = ""
+
+[params.brand]
+name = "Aqua Elite"
+accent = "#38bdf8"
+
+[params.supabase]
+url  = "https://YOUR-PROJECT-REF.supabase.co"
+anon = "YOUR_ANON_PUBLIC_KEY"

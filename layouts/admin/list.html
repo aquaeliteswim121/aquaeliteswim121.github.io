@@ -1,0 +1,155 @@
+
+{{ define "main" }}
+<section class="card">
+  <h1>Admin Dashboard</h1>
+  <div id="gate" class="muted">Checking permissions…</div>
+  <div id="adminPanel" class="hidden">
+    <div class="tabs">
+      <button class="tab btn secondary" data-tab="roster">Roster</button>
+      <button class="tab btn secondary" data-tab="attendance">Attendance</button>
+      <button class="tab btn secondary" data-tab="workouts">Workouts</button>
+      <button class="tab btn secondary" data-tab="payments">Payments</button>
+      <button class="tab btn secondary" data-tab="videos">Videos</button>
+      <button class="tab btn secondary" data-tab="seed">Seed</button>
+    </div>
+
+    <div id="tab-roster" class="panel">
+      <form id="upsertProfile" class="grid">
+        <div class="panel">
+          <h3>Add/Update swimmer</h3>
+          <input name="email" placeholder="Email" required />
+          <input name="full_name" placeholder="Full name" />
+          <select name="role"><option value="swimmer">swimmer</option><option value="coach">coach</option><option value="admin">admin</option></select>
+          <div class="grid">
+            <select name="squad_level"><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select>
+            <select name="sublevel"><option>S3</option><option>S2</option><option>S1</option></select>
+            <select name="group_no"><option>4</option><option>3</option><option>2</option><option>1</option><option>0</option></select>
+          </div>
+          <button class="btn">Save</button>
+        </div>
+        <div class="panel">
+          <h3>Roster</h3>
+          <input id="q" placeholder="Search email/name" />
+          <button id="searchBtn" type="button">Search</button>
+          <div id="roster"></div>
+        </div>
+      </form>
+    </div>
+
+    <div id="tab-attendance" class="panel hidden">
+      <h3>Mark attendance</h3>
+      <form id="attForm">
+        <input name="email" placeholder="Swimmer email" required />
+        <input name="date" type="date" required />
+        <label><input type="checkbox" name="present" /> Present</label>
+        <button>Save</button>
+      </form>
+    </div>
+
+    <div id="tab-workouts" class="panel hidden">
+      <h3>Create workout</h3>
+      <form id="wForm">
+        <input name="email" placeholder="Swimmer email" required />
+        <input name="date" type="date" required />
+        <input name="session_name" placeholder="Session name" />
+        <input name="group_no" type="number" min="0" max="4" placeholder="Group" />
+        <input name="total_meters" type="number" placeholder="Total meters" />
+        <textarea name="main_set" placeholder="Main set"></textarea>
+        <textarea name="notes" placeholder="Coach notes"></textarea>
+        <input name="rpe" type="number" min="1" max="10" placeholder="RPE" />
+        <button>Save</button>
+      </form>
+    </div>
+
+    <div id="tab-payments" class="panel hidden">
+      <h3>Record payment</h3>
+      <form id="pForm">
+        <input name="email" placeholder="Swimmer email" required />
+        <input name="period" type="month" required />
+        <input name="amount" type="number" step="0.01" placeholder="Amount" />
+        <select name="status"><option>paid</option><option>pending</option><option>overdue</option></select>
+        <input name="due_date" type="date" />
+        <input name="paid_on" type="date" />
+        <button>Save</button>
+      </form>
+    </div>
+
+    <div id="tab-videos" class="panel hidden">
+      <h3>Add Video</h3>
+      <form id="vForm">
+        <input name="youtube_id" placeholder="YouTube ID (e.g., dQw4w9WgXcQ)" required />
+        <input name="title" placeholder="Title" />
+        <input name="group_min" type="number" min="0" max="4" value="4" />
+        <input name="group_max" type="number" min="0" max="4" value="0" />
+        <button>Save</button>
+      </form>
+    </div>
+
+    <div id="tab-seed" class="panel hidden">
+      <h3>Seeding</h3>
+      <button id="seedVideos" class="btn secondary">Seed default videos</button>
+      <form id="seedSampleForm" style="margin-top:10px">
+        <input name="email" placeholder="Swimmer email (must have logged in once)" required />
+        <button>Seed sample data for swimmer</button>
+      </form>
+    </div>
+  </div>
+</section>
+<script defer src="/js/api.js"></script>
+<script>
+  function showTab(id){
+    document.querySelectorAll('[id^=tab-]').forEach(el => el.classList.add('hidden'));
+    document.getElementById('tab-'+id).classList.remove('hidden');
+  }
+  window.addEventListener('DOMContentLoaded', async () => {
+    await requireAuth('/');
+    const me = await api.getMyProfile();
+    if (me.role !== 'admin'){ document.getElementById('gate').textContent = 'Admins only.'; return; }
+    document.getElementById('gate').classList.add('hidden');
+    document.getElementById('adminPanel').classList.remove('hidden');
+
+    document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
+    showTab('roster');
+
+    document.getElementById('upsertProfile').addEventListener('submit', async (e) => {
+      e.preventDefault(); const f = new FormData(e.target);
+      await api.upsertProfile(Object.fromEntries(f.entries())); alert('Saved');
+      document.getElementById('searchBtn').click();
+    });
+    document.getElementById('searchBtn').addEventListener('click', async () => {
+      const q = document.getElementById('q').value;
+      const list = await api.getRoster(q, 50, 0);
+      const html = ['<table class="table"><thead><tr><th>Name</th><th>Email</th><th>Level</th><th>Group</th><th>Role</th></tr></thead><tbody>'];
+      (list||[]).forEach(r => html.push(`<tr><td>${r.full_name||''}</td><td>${r.email||''}</td><td>${r.squad_level||''} ${r.sublevel||''}</td><td>${r.group_no??''}</td><td>${r.role||''}</td></tr>`));
+      html.push('</tbody></table>');
+      document.getElementById('roster').innerHTML = html.join('');
+    });
+
+    document.getElementById('attForm').addEventListener('submit', async (e) => {
+      e.preventDefault(); const f = new FormData(e.target);
+      await api.markAttendance(Object.fromEntries(f.entries())); alert('Saved'); e.target.reset();
+    });
+    document.getElementById('wForm').addEventListener('submit', async (e) => {
+      e.preventDefault(); const f = new FormData(e.target);
+      await api.createWorkout(Object.fromEntries(f.entries())); alert('Saved'); e.target.reset();
+    });
+    document.getElementById('pForm').addEventListener('submit', async (e) => {
+      e.preventDefault(); const f = new FormData(e.target);
+      await api.recordPayment(Object.fromEntries(f.entries())); alert('Saved'); e.target.reset();
+    });
+    document.getElementById('vForm').addEventListener('submit', async (e) => {
+      e.preventDefault(); const f = new FormData(e.target);
+      await api.addVideo(Object.fromEntries(f.entries())); alert('Saved'); e.target.reset();
+    });
+    document.getElementById('seedVideos').addEventListener('click', async () => {
+      await api.seedVideosDefaults(); alert('Default videos seeded'); 
+    });
+    document.getElementById('seedSampleForm').addEventListener('submit', async (e) => {
+      e.preventDefault(); const f = new FormData(e.target);
+      await api.seedSampleFor(f.get('email')); alert('Seeded for ' + f.get('email')); e.target.reset();
+    });
+
+    document.getElementById('searchBtn').click();
+  });
+</script>
+{{ end }}

@@ -1,0 +1,64 @@
+
+{{ define "main" }}
+<section id="dashboard" class="card">
+  <h1>My Dashboard</h1>
+  <div id="whoami" class="muted"></div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>Attendance</h2>
+      <div id="heatmap" class="heatmap"></div>
+      <div id="att-detail" class="muted small"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Recent Workouts</h2>
+      <ul id="workouts"></ul>
+      <a href="/workouts/" class="muted">View all →</a>
+    </div>
+
+    <div class="panel">
+      <h2>Progress</h2>
+      <ul id="progress"></ul>
+      <a href="/profile/" class="muted">Edit profile →</a>
+    </div>
+
+    <div class="panel">
+      <h2>Payments</h2>
+      <ul id="payments"></ul>
+    </div>
+
+    <div class="panel">
+      <h2>Videos</h2>
+      <div id="videos" class="videos"></div>
+      <a href="/videos/" class="muted">More videos →</a>
+    </div>
+  </div>
+</section>
+<script defer src="/js/heatmap.js"></script>
+<script defer src="/js/api.js"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', async () => {
+    await requireAuth('/');
+    const profile = await api.getMyProfile();
+    document.getElementById('whoami').textContent = `${profile.display_name || profile.full_name} — ${profile.squad_level} ${profile.sublevel} (Group ${profile.group_no})`;
+
+    const start = new Date(); start.setDate(start.getDate() - 180);
+    const att = await api.getAttendanceRange(start.toISOString().slice(0,10));
+    renderHeatmap(att);
+    document.getElementById('att-detail').textContent = `Last 180 days: ${att.filter(a=>a.present).length} present / ${att.length} tracked days.`;
+
+    const workouts = await api.getRecentWorkouts(5);
+    document.getElementById('workouts').innerHTML = (workouts||[]).map(w => `<li>${w.date}: ${w.total_meters||0}m — ${w.session_name||''}</li>`).join('');
+
+    const progress = await api.getProgress();
+    document.getElementById('progress').innerHTML = (progress||[]).map(p => `<li>${p.skill} ${p.achieved ? '✅' : '⬜️'}</li>`).join('');
+
+    const pays = await api.getPayments(6);
+    document.getElementById('payments').innerHTML = (pays||[]).map(p => `<li>${p.period.slice(0,7)} — ${p.status}</li>`).join('');
+
+    const vids = await api.getVideosForGroup(profile.group_no);
+    document.getElementById('videos').innerHTML = (vids||[]).map(v => `<iframe loading="lazy" width="280" height="158" src="https://www.youtube.com/embed/${v.youtube_id}" title="${v.title||''}" frameborder="0" allowfullscreen></iframe>`).join('');
+  });
+</script>
+{{ end }}
